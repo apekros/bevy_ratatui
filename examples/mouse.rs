@@ -9,9 +9,9 @@ use ratatui::crossterm::event::MouseEventKind;
 fn main() {
     let wait_duration = std::time::Duration::from_secs_f64(1. / 60.); // 60 FPS
     App::new()
-        .add_plugins(RatatuiPlugins {
+        .add_plugins(RatatuiPlugins::<bevy_ratatui::context::CrosstermContext> {
             enable_mouse_capture: true,
-            ..default()
+            ..RatatuiPlugins::default()
         })
         .add_plugins(ScheduleRunnerPlugin::run_loop(wait_duration))
         .add_systems(PreUpdate, keyboard_input_system)

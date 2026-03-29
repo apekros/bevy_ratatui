@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use bevy::{
     app::{Plugin, PluginGroup, PluginGroupBuilder, Startup},
     prelude::{Commands, Result},
@@ -17,7 +19,9 @@ use crate::context::TerminalContext;
 ///
 /// App::new().add_plugins(RatatuiPlugins::default());
 /// ```
-pub struct RatatuiPlugins {
+pub struct RatatuiPlugins<C: TerminalContext = DefaultContext> {
+    #[doc(hidden)]
+    pub _context: PhantomData<fn() -> C>,
     /// Use kitty protocol if available and enabled.
     pub enable_kitty_protocol: bool,
     /// Capture mouse if enabled.
@@ -26,9 +30,12 @@ pub struct RatatuiPlugins {
     pub enable_input_forwarding: bool,
 }
 
-impl Default for RatatuiPlugins {
+pub type GenericRatatuiPlugins<C> = RatatuiPlugins<C>;
+
+impl<C: TerminalContext> Default for RatatuiPlugins<C> {
     fn default() -> Self {
         Self {
+            _context: PhantomData,
             enable_kitty_protocol: true,
             enable_mouse_capture: false,
             enable_input_forwarding: false,
@@ -36,30 +43,43 @@ impl Default for RatatuiPlugins {
     }
 }
 
-impl PluginGroup for RatatuiPlugins {
+impl RatatuiPlugins<DefaultContext> {
+    #[allow(clippy::should_implement_trait)]
+    pub fn default() -> Self {
+        Default::default()
+    }
+}
+
+impl<C: TerminalContext> PluginGroup for RatatuiPlugins<C> {
     fn build(self) -> PluginGroupBuilder {
         let mut builder = PluginGroupBuilder::start::<Self>();
 
-        builder = builder.add(ContextPlugin);
+        builder = builder.add(ContextPlugin::<C>(PhantomData));
 
-        builder = DefaultContext::configure_plugin_group(&self, builder);
+        builder = C::configure_plugin_group(&self, builder);
 
         builder
     }
 }
 
 /// The plugin responsible for adding the `RatatuiContext` resource to your bevy application.
-pub struct ContextPlugin;
+pub struct ContextPlugin<C: TerminalContext = DefaultContext>(PhantomData<C>);
 
-impl Plugin for ContextPlugin {
+impl<C: TerminalContext> Default for ContextPlugin<C> {
+    fn default() -> Self {
+        Self(PhantomData)
+    }
+}
+
+impl<C: TerminalContext> Plugin for ContextPlugin<C> {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_systems(Startup, context_setup);
+        app.add_systems(Startup, context_setup::<C>);
     }
 }
 
 /// A startup system that sets up the terminal context.
-pub fn context_setup(mut commands: Commands) -> Result {
-    let terminal = RatatuiContext::init()?;
+pub fn context_setup<C: TerminalContext>(mut commands: Commands) -> Result {
+    let terminal = RatatuiContext::<C>::init()?;
     commands.insert_resource(terminal);
 
     Ok(())

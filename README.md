@@ -58,6 +58,16 @@ fn input_system(mut messages: MessageReader<KeyMessage>, mut exit: MessageWriter
 ...or use the `enable_input_forwarding` option in `RatatuiPlugins` which will
 map crossterm input events to normal bevy input messages.
 
+## custom terminal contexts
+
+If you need to construct the terminal with something other than the default
+context, for example writing to `/dev/tty` when another process owns stdout, you
+can use `RatatuiContext` and `RatatuiPlugins` with your own
+context type. Crossterm-based contexts can reuse the standard plugin stack with
+`configure_crossterm_plugin_group`. See
+[examples/custom_context.rs](examples/custom_context.rs) for a complete
+example.
+
 ## demo
 
 ![Made with VHS](https://vhs.charm.sh/vhs-2g0S6RgGGQHseTCNItEQhg.gif)

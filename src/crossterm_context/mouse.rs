@@ -1,5 +1,5 @@
 //! Mouse support.
-use std::io::stdout;
+use std::marker::PhantomData;
 
 use bevy::prelude::*;
 use ratatui::crossterm::{
@@ -7,27 +7,39 @@ use ratatui::crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
 };
 
-/// Plugin responsible for enabling mouse capture.
-pub struct MousePlugin;
+use super::context::CrosstermTerminalContext;
 
-impl Plugin for MousePlugin {
+/// Plugin responsible for enabling mouse capture.
+pub struct MousePlugin<C: CrosstermTerminalContext>(PhantomData<C>);
+
+impl<C: CrosstermTerminalContext> Default for MousePlugin<C> {
+    fn default() -> Self {
+        Self(PhantomData)
+    }
+}
+
+impl<C: CrosstermTerminalContext> Plugin for MousePlugin<C> {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_systems(Startup, mouse_setup);
+        app.add_systems(Startup, mouse_setup::<C>);
     }
 }
 
 /// Resource indicating that mouse capture was successfully enabled in the current terminal buffer.
-#[derive(Resource, Default)]
-pub struct MouseEnabled;
+#[derive(Resource)]
+pub struct GenericMouseEnabled<C: CrosstermTerminalContext>(PhantomData<C>);
 
-fn mouse_setup(mut commands: Commands) -> Result {
-    stdout().execute(EnableMouseCapture)?;
-    commands.insert_resource(MouseEnabled);
+pub type MouseEnabled = GenericMouseEnabled<crate::context::CrosstermContext>;
+
+fn mouse_setup<C: CrosstermTerminalContext>(mut commands: Commands) -> Result {
+    C::terminal_writer()?.execute(EnableMouseCapture)?;
+    commands.insert_resource(GenericMouseEnabled::<C>(PhantomData));
     Ok(())
 }
 
-impl Drop for MouseEnabled {
+impl<C: CrosstermTerminalContext> Drop for GenericMouseEnabled<C> {
     fn drop(&mut self) {
-        let _ = stdout().execute(DisableMouseCapture);
+        if let Ok(mut writer) = C::terminal_writer() {
+            let _ = writer.execute(DisableMouseCapture);
+        }
     }
 }

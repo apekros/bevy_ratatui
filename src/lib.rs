@@ -63,8 +63,8 @@ mod ratatui_plugin;
 #[cfg(feature = "windowed")]
 mod windowed_context;
 
-pub use ratatui_context::RatatuiContext;
-pub use ratatui_plugin::RatatuiPlugins;
+pub use ratatui_context::{GenericRatatuiContext, RatatuiContext};
+pub use ratatui_plugin::{GenericRatatuiPlugins, RatatuiPlugins};
 
 #[cfg(feature = "crossterm")]
 pub use ratatui::crossterm;
@@ -72,7 +72,9 @@ pub use ratatui::crossterm;
 pub mod context {
     pub use super::context_trait::TerminalContext;
     #[cfg(feature = "crossterm")]
-    pub use super::crossterm_context::context::CrosstermContext;
+    pub use super::crossterm_context::context::{
+        CrosstermContext, CrosstermTerminalContext, configure_crossterm_plugin_group,
+    };
     pub use super::ratatui_context::DefaultContext;
     pub use super::ratatui_plugin::ContextPlugin;
     #[cfg(feature = "windowed")]
@@ -99,12 +101,12 @@ pub mod event {
 
 #[cfg(feature = "crossterm")]
 pub mod kitty {
-    pub use super::crossterm_context::kitty::{KittyEnabled, KittyPlugin};
+    pub use super::crossterm_context::kitty::{GenericKittyEnabled, KittyEnabled, KittyPlugin};
 }
 
 #[cfg(all(feature = "crossterm", feature = "mouse"))]
 pub mod mouse {
-    pub use super::crossterm_context::mouse::{MouseEnabled, MousePlugin};
+    pub use super::crossterm_context::mouse::{GenericMouseEnabled, MouseEnabled, MousePlugin};
 }
 
 #[cfg(feature = "crossterm")]

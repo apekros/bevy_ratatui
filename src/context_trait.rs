@@ -10,9 +10,12 @@ use crate::RatatuiPlugins;
 /// the `configure_plugin_group()` function to add any systems, resources, events, etcetera
 /// necessary for the functioning of its associated Ratatui backend or its particular
 /// functionality.
-pub trait TerminalContext<T: Backend + 'static>:
-    Sized + Send + Sync + Deref<Target = Terminal<T>> + 'static
+pub trait TerminalContext:
+    Sized + Send + Sync + Deref<Target = Terminal<Self::Backend>> + 'static
 {
+    /// The Ratatui backend used by this terminal context.
+    type Backend: Backend + 'static;
+
     /// Initialize the terminal context.
     fn init() -> Result<Self>;
 
@@ -22,7 +25,7 @@ pub trait TerminalContext<T: Backend + 'static>:
     /// Configure the plugin group to add the plugins necessary for this particular backend's
     /// functionality.
     fn configure_plugin_group(
-        group: &RatatuiPlugins,
+        group: &RatatuiPlugins<Self>,
         builder: PluginGroupBuilder,
     ) -> PluginGroupBuilder;
 }

@@ -1,4 +1,4 @@
-use std::io::{Stdout, stdout};
+use std::io::{Stdout, Write, stdout};
 
 use bevy::prelude::*;
 
@@ -19,11 +19,54 @@ use super::mouse::MousePlugin;
 #[cfg(feature = "keyboard")]
 use super::translation::TranslationPlugin;
 
+pub trait CrosstermTerminalContext:
+    TerminalContext<Backend = CrosstermBackend<Self::Writer>>
+{
+    type Writer: Write;
+
+    fn terminal_writer() -> std::io::Result<Self::Writer>;
+}
+
+pub fn configure_crossterm_plugin_group<C: CrosstermTerminalContext>(
+    group: &RatatuiPlugins<C>,
+    mut builder: bevy::app::PluginGroupBuilder,
+) -> bevy::app::PluginGroupBuilder {
+    builder = builder
+        .add(CleanupPlugin::<C>::default())
+        .add(ErrorPlugin::<C>::default())
+        .add(EventPlugin::default())
+        .add(KittyPlugin::<C>::default());
+
+    #[cfg(feature = "mouse")]
+    let builder = builder.add(MousePlugin::<C>::default());
+    #[cfg(feature = "keyboard")]
+    let builder = builder.add(TranslationPlugin);
+
+    let mut builder = builder;
+    if !group.enable_kitty_protocol {
+        builder = builder.disable::<KittyPlugin<C>>();
+    }
+
+    #[cfg(feature = "mouse")]
+    if !group.enable_mouse_capture {
+        builder = builder.disable::<MousePlugin<C>>();
+    }
+
+    #[cfg(feature = "keyboard")]
+    if !group.enable_input_forwarding {
+        builder = builder.disable::<TranslationPlugin>();
+    }
+
+    builder
+}
+
 /// Ratatui context that will draw to the terminal buffer using crossterm.
 #[derive(Deref, DerefMut, Debug)]
 pub struct CrosstermContext(Terminal<CrosstermBackend<Stdout>>);
 
-impl TerminalContext<CrosstermBackend<Stdout>> for CrosstermContext {
+impl TerminalContext for CrosstermContext {
+    type Backend = CrosstermBackend<Stdout>;
+
     fn init() -> Result<Self> {
         let mut stdout = stdout();
         stdout.execute(EnterAlternateScreen)?;
@@ -43,35 +86,17 @@ impl TerminalContext<CrosstermBackend<Stdout>> for CrosstermContext {
     }
 
     fn configure_plugin_group(
-        group: &RatatuiPlugins,
-        mut builder: bevy::app::PluginGroupBuilder,
+        group: &RatatuiPlugins<Self>,
+        builder: bevy::app::PluginGroupBuilder,
     ) -> bevy::app::PluginGroupBuilder {
-        builder = builder
-            .add(CleanupPlugin)
-            .add(ErrorPlugin)
-            .add(EventPlugin::default())
-            .add(KittyPlugin);
+        configure_crossterm_plugin_group(group, builder)
+    }
+}
 
-        #[cfg(feature = "mouse")]
-        let builder = builder.add(MousePlugin);
-        #[cfg(feature = "keyboard")]
-        let builder = builder.add(TranslationPlugin);
+impl CrosstermTerminalContext for CrosstermContext {
+    type Writer = Stdout;
 
-        let mut builder = builder;
-        if !group.enable_kitty_protocol {
-            builder = builder.disable::<KittyPlugin>();
-        }
-
-        #[cfg(feature = "mouse")]
-        if !group.enable_mouse_capture {
-            builder = builder.disable::<MousePlugin>();
-        }
-
-        #[cfg(feature = "keyboard")]
-        if !group.enable_input_forwarding {
-            builder = builder.disable::<TranslationPlugin>();
-        }
-
-        builder
+    fn terminal_writer() -> std::io::Result<Self::Writer> {
+        Ok(stdout())
     }
 }

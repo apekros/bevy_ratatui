@@ -17,9 +17,9 @@ use ratatui::text::Text;
 fn main() {
     let wait_duration = std::time::Duration::from_secs_f64(1. / 60.); // 60 FPS
     App::new()
-        .add_plugins(RatatuiPlugins {
+        .add_plugins(RatatuiPlugins::<bevy_ratatui::context::CrosstermContext> {
             enable_input_forwarding: true,
-            ..default()
+            ..RatatuiPlugins::default()
         })
         .add_plugins(ScheduleRunnerPlugin::run_loop(wait_duration))
         .add_systems(
@@ -148,7 +148,7 @@ fn hotkeys(
 
 fn keyboard_input_system(mut messages: MessageReader<KeyMessage>, mut commands: Commands) {
     for message in messages.read() {
-        commands.insert_resource(LastKeypress(message.clone()));
+        commands.insert_resource(LastKeypress(*message));
     }
 }
 

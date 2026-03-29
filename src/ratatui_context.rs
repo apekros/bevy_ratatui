@@ -26,22 +26,24 @@ pub type DefaultContext = crate::context::WindowedContext;
 /// }
 /// ```
 #[derive(Resource, Deref, DerefMut, Debug)]
-pub struct RatatuiContext(pub DefaultContext);
+pub struct RatatuiContext<C: TerminalContext = DefaultContext>(pub C);
 
-impl Drop for RatatuiContext {
+pub type GenericRatatuiContext<C> = RatatuiContext<C>;
+
+impl<C: TerminalContext> Drop for RatatuiContext<C> {
     fn drop(&mut self) {
-        if let Err(err) = DefaultContext::restore() {
+        if let Err(err) = C::restore() {
             eprintln!("Failed to restore terminal: {}", err);
         }
     }
 }
 
-impl RatatuiContext {
+impl<C: TerminalContext> RatatuiContext<C> {
     pub fn init() -> Result<Self> {
-        Ok(Self(DefaultContext::init()?))
+        Ok(Self(C::init()?))
     }
 
     pub fn restore() -> Result {
-        DefaultContext::restore()
+        C::restore()
     }
 }

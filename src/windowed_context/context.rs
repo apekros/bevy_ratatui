@@ -23,7 +23,9 @@ impl Debug for WindowedContext {
     }
 }
 
-impl TerminalContext<SoftBackend<EmbeddedGraphics>> for WindowedContext {
+impl TerminalContext for WindowedContext {
+    type Backend = SoftBackend<EmbeddedGraphics>;
+
     fn init() -> Result<Self> {
         let font_regular = mono_8x13_atlas();
         let font_italic = mono_8x13_italic_atlas();
@@ -44,7 +46,7 @@ impl TerminalContext<SoftBackend<EmbeddedGraphics>> for WindowedContext {
     }
 
     fn configure_plugin_group(
-        _group: &crate::RatatuiPlugins,
+        _group: &crate::RatatuiPlugins<Self>,
         mut builder: bevy::app::PluginGroupBuilder,
     ) -> bevy::app::PluginGroupBuilder {
         builder = builder.add(WindowedPlugin);
